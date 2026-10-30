@@ -1,0 +1,24 @@
+{
+  "name": "faculty-workload-system",
+  "version": "1.0.1",
+  "description": "Faculty Course and Workload Management System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "keywords": ["faculty", "course", "workload", "management"],
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "mongoose": "^9.11.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
