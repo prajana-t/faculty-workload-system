@@ -446,12 +446,27 @@ app.post("/api/workloads", async (req, res) => {
     if (!Number.isInteger(labSessions) || labSessions < 0 || labSessions > 5) {
       return res.status(400).json({ message: "Lab sessions per week must be a whole number from 0 to 5." });
     }
-    if (typeof semester !== "string" || !semester.trim()) return res.status(400).json({ message: "Semester is required." });
-    const workload = await Workload.create({ faculty, course, semester: semester.trim(), weeklyHours: hours, labSessions });
-    const result = await Workload.findById(workload._id)
-      .populate("faculty", "name employeeId department")
-      .populate("course", "courseCode courseName credits");
-    res.status(201).json(result);
+    const semesterValue = String(semester ?? "").trim();
+
+if (!/^(10|[1-9])$/.test(semesterValue)) {
+    return res.status(400).json({
+        message: "Semester must be a number between 1 and 10."
+    });
+}
+
+const workload = await Workload.create({
+    faculty,
+    course,
+    semester: Number(semesterValue),
+    weeklyHours: hours,
+    labSessions
+});
+
+const result = await Workload.findById(workload._id)
+    .populate("faculty", "name employeeId department")
+    .populate("course", "courseCode courseName credits");
+
+res.status(201).json(result);
   } catch (error) { res.status(400).json({ message: error.message }); }
 });
 
