@@ -366,20 +366,74 @@ app.get("/api/faculty", async (req, res) => {
   } catch (error) { res.status(500).json({ message: error.message }); }
 });
 
+
 app.post("/api/faculty", async (req, res) => {
   try {
     const { name, employeeId, department, email } = req.body;
-    if (!validLetters(name)) return res.status(400).json({ message: "Faculty name must contain letters only." });
-    if (!validLetters(department)) return res.status(400).json({ message: "Department must contain letters only." });
-    if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return res.status(400).json({ message: "Enter a valid email address." });
+
+    // Faculty name validation
+    if (!validLetters(name)) {
+      return res.status(400).json({
+        message: "Faculty name must contain letters only."
+      });
+    }
+
+    // Employee ID: One English letter followed by numbers
+    if (!/^[A-Za-z][0-9]+$/.test(String(employeeId || "").trim())) {
+      return res.status(400).json({
+        message: "Employee ID must contain one letter followed by numbers (e.g., A123)."
+      });
+    }
+
+    // Department: Letters, spaces, dots, ampersands, parentheses and hyphens
+    const departmentPattern = /^[\p{L}][\p{L}\s.&()'-]*$/u;
+
+    if (!departmentPattern.test(String(department || "").trim())) {
+      return res.status(400).json({
+        message: "Department can contain letters, spaces, dots, ampersands, parentheses and hyphens only."
+      });
+    }
+
+    // Email validation
+    if (
+      typeof email !== "string" ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+    ) {
+      return res.status(400).json({
+        message: "Enter a valid email address."
+      });
+    }
+
     const normalizedEmail = email.trim().toLowerCase();
+
     const escapedEmail = normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const existingEmail = await Faculty.exists({ email: { $regex: `^${escapedEmail}$`, $options: "i" } });
-    if (existingEmail) return res.status(409).json({ message: "This email address is already registered." });
-    const faculty = await Faculty.create({ name, employeeId, department, email: normalizedEmail });
+
+    const existingEmail = await Faculty.exists({
+      email: { $regex: `^${escapedEmail}$`, $options: "i" }
+    });
+
+    if (existingEmail) {
+      return res.status(409).json({
+        message: "This email address is already registered."
+      });
+    }
+
+    const faculty = await Faculty.create({
+      name: name.trim(),
+      employeeId: employeeId.trim(),
+      department: department.trim(),
+      email: normalizedEmail
+    });
+
     res.status(201).json(faculty);
-  } catch (error) { res.status(400).json({ message: duplicateMessage(error) }); }
+
+  } catch (error) {
+    res.status(400).json({
+      message: duplicateMessage(error)
+    });
+  }
 });
+
 
 app.delete("/api/faculty/:id", async (req, res) => {
   try {
@@ -396,18 +450,74 @@ app.get("/api/courses", async (req, res) => {
   catch (error) { res.status(500).json({ message: error.message }); }
 });
 
+
 app.post("/api/courses", async (req, res) => {
   try {
     const { courseCode, courseName, department, credits } = req.body;
-    if (typeof courseCode !== "string" || !/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9]+$/.test(courseCode.trim())) return res.status(400).json({ message: "Course code must contain letters and numbers (for example CS301)." });
-    if (!validLetters(courseName)) return res.status(400).json({ message: "Course name must contain letters only." });
-    if (!validLetters(department)) return res.status(400).json({ message: "Department must contain letters only." });
+
+    // Course code: must contain letters and numbers
+    if (
+      typeof courseCode !== "string" ||
+      !/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9]+$/.test(courseCode.trim())
+    ) {
+      return res.status(400).json({
+        message: "Course code must contain letters and numbers (for example CS301)."
+      });
+    }
+
+    // Course name: allows letters, numbers and common course symbols
+    const courseNamePattern = /^[A-Za-z0-9][A-Za-z0-9\s.&+#()/-]*$/;
+
+    if (
+      typeof courseName !== "string" ||
+      !courseNamePattern.test(courseName.trim())
+    ) {
+      return res.status(400).json({
+        message: "Course name can contain letters, numbers, spaces and symbols such as &, +, #, -, /, and parentheses."
+      });
+    }
+
+    // Department: allows B.Tech, B.Sc., AI & ML, etc.
+    const departmentPattern = /^[\p{L}][\p{L}\s.&()'-]*$/u;
+
+    if (
+      typeof department !== "string" ||
+      !departmentPattern.test(department.trim())
+    ) {
+      return res.status(400).json({
+        message: "Enter a valid department name."
+      });
+    }
+
+    // Credits: whole number between 1 and 10
     const creditValue = Number(credits);
-    if (!Number.isInteger(creditValue) || creditValue < 1 || creditValue > 10) return res.status(400).json({ message: "Course credits must be a whole number between 1 and 10." });
-    const course = await Course.create({ courseCode: courseCode.trim().toUpperCase(), courseName, department, credits: creditValue });
+
+    if (
+      !Number.isInteger(creditValue) ||
+      creditValue < 1 ||
+      creditValue > 10
+    ) {
+      return res.status(400).json({
+        message: "Course credits must be a whole number between 1 and 10."
+      });
+    }
+
+    const course = await Course.create({
+      courseCode: courseCode.trim().toUpperCase(),
+      courseName: courseName.trim(),
+      department: department.trim(),
+      credits: creditValue
+    });
+
     res.status(201).json(course);
-  } catch (error) { res.status(400).json({ message: duplicateMessage(error) }); }
+
+  } catch (error) {
+    res.status(400).json({
+      message: duplicateMessage(error)
+    });
+  }
 });
+
 
 app.delete("/api/courses/:id", async (req, res) => {
   try {

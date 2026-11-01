@@ -120,9 +120,19 @@ $(document).ready(function () {
       email: $("#facultyEmail").val().trim()
     };
 
-    const lettersOnly = /^[\p{L}]+(?:[\s'-][\p{L}]+)*$/u;
-    if (!lettersOnly.test(data.name)) return showMessage("Faculty name must contain letters only.", false);
-    if (!lettersOnly.test(data.department)) return showMessage("Department must contain letters only.", false);
+    // Faculty name: letters, spaces, hyphens and apostrophes
+    const namePattern = /^[\p{L}]+(?:[\s'-][\p{L}]+)*$/u;
+
+    if (!namePattern.test(data.name.trim())) {
+      return showMessage("Faculty name must contain letters only.", false);
+    }
+
+    // Department: allows B.Tech, B.Sc., AI & ML, etc.
+    const departmentPattern = /^[\p{L}][\p{L}\s.&()'-]*$/u;
+
+    if (!departmentPattern.test(data.department.trim())) {
+      return showMessage("Enter a valid department name.", false);
+    }
 
     try {
       await api("/api/faculty", "POST", data);
@@ -195,10 +205,39 @@ $(document).ready(function () {
       credits: Number($("#credits").val())
     };
 
-    const lettersOnly = /^[\p{L}]+(?:[\s'-][\p{L}]+)*$/u;
-    if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9]+$/.test(data.courseCode)) return showMessage("Course code must contain letters and numbers, such as CS301.", false);
-    if (!lettersOnly.test(data.courseName)) return showMessage("Course name must contain letters only.", false);
-    if (!lettersOnly.test(data.department)) return showMessage("Department must contain letters only.", false);
+    // Course code: must contain letters and numbers (example: CS301)
+    if (
+    typeof data.courseCode !== "string" ||
+    !/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9]+$/.test(data.courseCode.trim())
+    ) {
+      return showMessage(
+        "Course code must contain letters and numbers, such as CS301.",
+        false
+      );
+    }
+
+    // Course name: allows letters, numbers and common course symbols
+    const courseNamePattern = /^[A-Za-z0-9][A-Za-z0-9\s.&+#()/-]*$/;
+    if (
+    typeof data.courseName !== "string" ||
+    !courseNamePattern.test(data.courseName.trim())
+    ) {
+      return showMessage(
+        "Course name can contain letters, numbers, spaces and symbols such as &, +, #, -, /, and parentheses.",
+        false
+      );
+    }
+
+    // Department: allows B.Tech, B.Sc., AI & ML, etc.
+    const departmentPattern = /^[\p{L}][\p{L}\s.&()'-]*$/u;
+
+    if (
+    typeof data.department !== "string" ||
+    !departmentPattern.test(data.department.trim())
+    ) {
+      return showMessage("Enter a valid department name.", false);
+    }
+
 
     try {
       await api("/api/courses", "POST", data);
