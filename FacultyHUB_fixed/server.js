@@ -726,18 +726,86 @@ app.get("/api/reports/workload.xlsx", async (req, res) => {
     await workbook.xlsx.write(res); res.end();
   } catch (error) { res.status(500).json({ message: error.message }); }
 });
+
 app.get("/api/reports/workload.pdf", async (req, res) => {
-  try {
-    const rows = await Workload.find().populate("faculty", "name employeeId department").populate("course", "courseCode courseName").lean();
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", 'attachment; filename="faculty-workload.pdf"');
-    const doc = new PDFDocument({ margin: 40, size: "A4" }); doc.pipe(res);
-    doc.fontSize(18).text("Faculty Workload Report"); doc.moveDown();
-    doc.fontSize(9);
-    rows.forEach((r, i) => doc.text(`${i+1}. ${r.faculty?.name || "—"} (${r.faculty?.employeeId || "—"}) | ${r.course?.courseCode || "—"} - ${r.course?.courseName || ""} | ${r.semester} | ${r.weeklyHours} hrs/week`));
-    doc.end();
-  } catch (error) { res.status(500).json({ message: error.message }); }
+    try {
+        const rows = await Workload.find()
+            .populate("faculty", "name employeeId department")
+            .populate("course", "courseCode courseName")
+            .lean();
+
+        const doc = new PDFDocument({
+            margin: 40,
+            size: "A4"
+        });
+
+        const chunks = [];
+
+        doc.on("data", (chunk) => {
+            chunks.push(chunk);
+        });
+
+        doc.on("end", () => {
+            const pdfBuffer = Buffer.concat(chunks);
+
+            res.status(200);
+            res.setHeader("Content-Type", "application/pdf");
+            res.setHeader(
+                "Content-Disposition",
+                'attachment; filename="faculty-workload.pdf"'
+            );
+            res.setHeader("Content-Length", pdfBuffer.length);
+
+            res.end(pdfBuffer);
+        });
+
+        doc.on("error", (error) => {
+            console.error("PDF generation error:", error);
+
+            if (!res.headersSent) {
+                res.status(500).json({
+                    message: "PDF generation failed"
+                });
+            }
+        });
+
+        doc.fontSize(18)
+            .text("Faculty Workload Report", {
+                align: "center"
+            });
+
+        doc.moveDown();
+        doc.fontSize(9);
+
+        rows.forEach((r, i) => {
+            doc.text(
+                `${i + 1}. ${r.faculty?.name || "—"} (${r.faculty?.employeeId || "—"})`
+            );
+
+            doc.text(
+                `${r.course?.courseCode || "—"} - ${r.course?.courseName || ""}`
+            );
+
+            doc.text(
+                `Semester: ${r.semester || "—"} | ${r.weeklyHours || 0} hrs/week`
+            );
+
+            doc.moveDown();
+        });
+
+        doc.end();
+
+    } catch (error) {
+        console.error("PDF Report Error:", error);
+
+        if (!res.headersSent) {
+            res.status(500).json({
+                message: error.message
+            });
+        }
+    }
 });
+
 
 // REPORT
 app.get("/api/reports/workload", async (req, res) => {
